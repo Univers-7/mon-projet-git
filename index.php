@@ -1,13 +1,50 @@
 <?php
-// Paramètres de connexion à la base de données
+[cite_start]// 1. Configuration de la Base de Données [cite: 27-32]
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'todolist');
 define('DB_HOST', '127.0.0.1');
 define('DB_PORT', '3306');
 
-// Ici viendra le code Back-end pour traiter les formulaires plus tard...
+try {
+    // Connexion à la base de données via PDO
+    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";port=" . DB_PORT, DB_USER, DB_PASS);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (Exception $e) {
+    die("Erreur de connexion : " . $e->getMessage());
+}
 
+[cite_start]// 2. Traitement des formulaires (POST) [cite: 58]
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    
+    [cite_start]// Action: Ajouter une nouvelle tâche [cite: 60]
+    if ($_POST['action'] === 'new' && !empty($_POST['title'])) {
+        $stmt = $pdo->prepare("INSERT INTO todo (title) VALUES (:title)");
+        $stmt->execute(['title' => $_POST['title']]);
+    }
+    
+    [cite_start]// Action: Supprimer une tâche [cite: 61]
+    elseif ($_POST['action'] === 'delete' && !empty($_POST['id'])) {
+        $stmt = $pdo->prepare("DELETE FROM todo WHERE id = :id");
+        $stmt->execute(['id' => $_POST['id']]);
+    }
+    
+    [cite_start]// Action: Basculer l'état (Fait / Pas fait) [cite: 62]
+    elseif ($_POST['action'] === 'toggle' && !empty($_POST['id'])) {
+        [cite_start]// Astuce donnée dans le document [cite: 63]
+        $stmt = $pdo->prepare("UPDATE todo SET done = 1 - done WHERE id = :id");
+        $stmt->execute(['id' => $_POST['id']]);
+    }
+    
+    // Pour éviter de renvoyer le formulaire si on actualise la page
+    header("Location: index.php");
+    exit;
+}
+
+[cite_start]// 3. Récupération des tâches (Lecture) [cite: 55]
+[cite_start]// Triées par date de création du plus récent au plus ancien [cite: 57]
+$stmt = $pdo->query("SELECT * FROM todo ORDER BY created_at DESC");
+$taches = $stmt->fetchAll(PDO::FETCH_ASSOC); [cite_start]// Stockage dans la variable $taches [cite: 56]
 ?>
 
 <!DOCTYPE html>
